@@ -14,7 +14,7 @@ namespace CopyDirectory
     {
         static void Main(string[] args)
         {
-            var message = FileUtilities.CopyDirectory("C:\\Users\\jpmon\\Desktop\\in",
+            var message = FileUtilities.CopyDirectory(@"C:\Users\jpmon\Desktop\in",
                 @"C:\Users\jpmon\Desktop\out", false);
             Console.WriteLine(message);
         }
