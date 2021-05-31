@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CopyDirectory
 {
@@ -16,7 +13,7 @@ namespace CopyDirectory
      * 4. (optional) flag '-m' for allowing directory merge if destination dir already exists. False by default
      * 5. (optional) flag '-o' for overwriting files with same name. False by default
      */
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
@@ -39,7 +36,7 @@ namespace CopyDirectory
             var onlyOneFile = args.Contains("-f");
             var mergeDirs = args.Contains("-m");
             var overwriteFiles = args.Contains("-o");
-            var finalOutput = "";
+            string finalOutput;
 
             switch (action)
             {

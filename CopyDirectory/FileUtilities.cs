@@ -25,7 +25,7 @@ namespace CopyDirectory
                 File.Copy(fileSourcePath, fileDestinationPath, overwrite);    
             }
             catch(ArgumentException) {return GetMessage(ReturnMessages.NullData); }
-            catch (IOException e) { return GetMessage(ReturnMessages.OverwriteError); } 
+            catch (IOException) { return GetMessage(ReturnMessages.OverwriteError); } 
             catch (Exception) { return GetMessage(ReturnMessages.FailedToCopy); }
             
             return GetMessage(ReturnMessages.CopiedSuccessfully);
