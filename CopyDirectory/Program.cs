@@ -55,7 +55,6 @@ namespace CopyDirectory
             }
            
             Console.WriteLine(finalOutput);
-            Console.ReadLine();
         }
     }
 }
