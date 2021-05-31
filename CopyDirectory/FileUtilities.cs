@@ -7,32 +7,60 @@ namespace CopyDirectory
 {
     public static class FileUtilities
     {
-        public static void CopyFile(string fileSourcePath, string fileDestinationPath, bool overwrite)
+        /**
+         * This function moves one particular file at a time
+         * When invoked individually e.g. not copying a whole directory, the name
+         * and extension needs to be included in the destination path.
+         * Same applies for MoveFile function
+         * <param name="fileSourcePath">Path including name and extension of new file location</param>
+         * <param name="fileDestinationPath">Path including name and extension of new file location</param>
+         * <param name="overwrite">Overwrite file if it already exists on destination</param>
+         */
+        public static string CopyFile(string fileSourcePath, string fileDestinationPath, bool overwrite = false)
         {
-            // TODO Open new terminal with progress metrics
+            // Print has 1 indent for better visualization when copying dirs
+            Console.WriteLine("    -Copying file {0} to {1}", fileSourcePath, fileDestinationPath);
+            try 
+            {
+                File.Copy(fileSourcePath, fileDestinationPath, overwrite);    
+            }
+            catch(ArgumentException) {return GetMessage(ReturnMessages.NullData); }
+            catch (IOException e) { return GetMessage(ReturnMessages.OverwriteError); } 
+            catch (Exception) { return GetMessage(ReturnMessages.FailedToCopy); }
             
-            File.Copy(fileSourcePath, fileDestinationPath, overwrite);
-            
-            // Close extra terminal
+            return GetMessage(ReturnMessages.CopiedSuccessfully);
         }
         
-        public static void MoveFile(string fileSourcePath, string fileDestinationPath, bool overwrite)
+        /**
+         * This is the move function. It is designed for individual use only,
+         * since the MoveDirectory function implements the CopyFile pathway and manually deletes later.
+         * <param name="fileSourcePath">Path including name and extension of new file location</param>
+         * <param name="fileDestinationPath">Path including name and extension of new file location</param>
+         * <param name="overwrite">Overwrite file if it already exists on destination</param>
+         */
+        public static string MoveFile(string fileSourcePath, string fileDestinationPath, bool overwrite = false)
         {
-            // TODO Open new terminal with progress metrics
+            // Print has 1 indent for better visualization when moving dirs
+            Console.WriteLine("    -Moving file {0} to {1}", fileSourcePath, fileDestinationPath);
+            try
+            {
+                File.Copy(fileSourcePath, fileDestinationPath, overwrite);
+                Directory.Delete(fileSourcePath);
+            }
+            catch(ArgumentException) {return GetMessage(ReturnMessages.NullData); }
+            catch (IOException) { return GetMessage(ReturnMessages.OverwriteError); } 
+            catch (Exception) { return GetMessage(ReturnMessages.FailedToCopy); }
             
-            File.Copy(fileSourcePath, fileDestinationPath, overwrite);
-            Directory.Delete(fileSourcePath);
-            // Close extra terminal
+            return GetMessage(ReturnMessages.MovedSuccessfully);
         }
 
         /**
-         * This function moves the source directory (including the directory)
+         * This function makes a copy of the source directory
          * onto the destination location. Resulting in destination/sourceDir/*
-         * The Move function implements the same behaviour.
-         * 
-         * <param name="dirSourcePath">The source (original) path of the directory</param>
-         * <param name="dirDestinationPath"></param>
-         * <param name="overwrite"></param>
+         * The MoveDirectory function implements the same behaviour.
+         * <param name="dirSourcePath">Path including name and extension of new file location</param>
+         * <param name="dirDestinationPath">Path of new directory</param>
+         * <param name="overwrite">Overwrite file if it already exists on destination</param>
          * <param name="mergeDirectories">Whether to blend the source directory into the destination in case it is preexisting, or cancel the operation.</param>
          */
         public static string CopyDirectory(string dirSourcePath, string dirDestinationPath, bool overwrite = false, bool mergeDirectories = false)
@@ -46,60 +74,53 @@ namespace CopyDirectory
             if (Directory.Exists(finalDirPath) && !mergeDirectories)
                 return GetMessage(ReturnMessages.InvalidMoveLocation);
             
-            // Check dir exists
+            // Check dir exists and log process start
             if (!Directory.Exists(dirSourcePath)) return GetMessage(ReturnMessages.DirDoesNotExist);
             if (!Directory.Exists(finalDirPath)) Directory.CreateDirectory(finalDirPath);
+            Console.WriteLine("+Copying directory {0} to {1}", dirSourcePath, finalDirPath);
             
-            try
+            // Copy all files
+            foreach (var file in Directory.GetFiles(dirSourcePath))
             {
-                // Copy all files
-                foreach (var file in Directory.GetFiles(dirSourcePath))
-                {
-                    // Get file name from current path to build final path
-                    var finalFilePath = Path.Combine(finalDirPath, Path.GetFileName(file));
-                
-                    // Execute copy function
-                    CopyFile(file, finalFilePath, overwrite);
-                    
-                    /*
-                     * One issue with this approach is that if IOException occurs, the copied elements remain copied. 
-                     * An approach to fx this is goes something as
-                     *      create temporary folder
-                     *      copy each file onto temp folder after checking it does not exist into the actual folder
-                     *      destroy temp folder if error occurs. In this way either all or nothing is copied.
-                     * Another approach is to avoid copying duplicated files by try/catching in Copy funct and skip duplicates
-                     */
-                }
-                
-                //Copy all the directories by invoking itself with each nested dir's path
-                foreach (var dir in Directory.GetDirectories(dirSourcePath, "*", SearchOption.TopDirectoryOnly))
-                    CopyDirectory(dir, finalDirPath, overwrite, mergeDirectories);
+                // Get file name from current path to build final path
+                var finalFilePath = Path.Combine(finalDirPath, Path.GetFileName(file));
+
+                // Execute copy function
+                var result = CopyFile(file, finalFilePath, overwrite);
+                if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
             }
-            
-            // IOException can be only 1 particular error in this context (internal code 80, file already exists)
-            // ArgumentException and ArgumentNullException cannot be catched, as the code would not reach the try statement
-            catch (IOException) { return GetMessage(ReturnMessages.OverwriteError); } 
-            catch (Exception) { return GetMessage(ReturnMessages.FailedToCopy); }
+                
+            // Copy all the directories by invoking itself with each nested dir's path
+            foreach (var dir in Directory.GetDirectories(dirSourcePath, "*", SearchOption.TopDirectoryOnly))
+            {
+                var result = CopyDirectory(dir, finalDirPath, overwrite, mergeDirectories);
+                if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
+            }
             
             return GetMessage(ReturnMessages.CopiedSuccessfully);
         }
-
+        
         /**
-         * This function moves the source directory (including the directory)
-         * onto the destination location. Resulting in destination/sourceDir/*
-         * The Move function implements the same behaviour.
+         * This function makes use of the CopyDirectory function
+         * and safely deletes the source repository afterwards. 
+         * <param name="dirSourcePath">Path including name and extension of new file location</param>
+         * <param name="dirDestinationPath">Path of new directory</param>
+         * <param name="overwrite">Overwrite file if it already exists on destination</param>
          * <param name="mergeDirectories">Whether to blend the source directory into the destination in case it is preexisting, or cancel the operation.</param>
          */
         public static string MoveDirectory(string dirSourcePath, string dirDestinationPath, bool overwrite = false, bool mergeDirectories = false)
         {
-            // Check no data is null - this is executed twice as Copy does it too,
-            // however, it is an important-enough check to have at the beginning of both these functions.
-            // Possible improvement for this solution if I worked more time on it -> Avoid duplicating these 2 lines
+            /*
+             * Check no data is null - this is executed twice as Copy does it too,
+             * however, it is an important-enough check to have at the beginning of both of these functions.
+             *
+             * Possible improvement for this solution if I worked more time on it -> Avoid duplicating these 2 lines
+             */
             var paths = new[] {dirSourcePath, dirDestinationPath};
             if(!CheckNotNull(paths)) return GetMessage(ReturnMessages.NullData);
 
             // Stop if there's an error in the copy process
-            var output = CopyDirectory(dirSourcePath, dirDestinationPath, overwrite);
+            var output = CopyDirectory(dirSourcePath, dirDestinationPath, overwrite, mergeDirectories);
             if (output != GetMessage(ReturnMessages.CopiedSuccessfully)) return output;
             
             // Delete function uses the recycling bin
@@ -108,17 +129,13 @@ namespace CopyDirectory
             
             return GetMessage(ReturnMessages.MovedSuccessfully);
         }
-
-        /**
-         * This function checks that a series of items are not null.
-         * This is used for checking that no paths given by the user are null
-         * but the function is designed in this way so that 
-         */
-        private static bool CheckNotNull(IEnumerable<string> args) => args.All(path => path != null); 
+        
+        
+        private static bool CheckNotNull(IEnumerable<string> paths) => paths.All(path => path != null); 
         
         /**
-         * Get the message for the main terminal to be outputted to the user after the desired
-         * operation is completed on the secondary terminal.
+         * Gets the final message to be outputted to the user.
+         * It acts as a bridge between the enum and the main functions.
          */
         private static string GetMessage(ReturnMessages messageCode)
         {
