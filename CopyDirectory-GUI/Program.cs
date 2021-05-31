@@ -22,12 +22,13 @@ namespace CopyDirectory_GUI
             
             const string space = " ";
             var flags = "";
-            var action ="";
+            
             var possibleActions = new []{"copy", "move"} ;
             var repeat = true;
             while (repeat)
             {
                 // Action
+                var action ="";
                 Console.WriteLine("\nWhich operation would you like to carry out?");
                 while(!ValidateOptions(action,possibleActions))
                     action = Console.ReadLine();
@@ -72,7 +73,13 @@ namespace CopyDirectory_GUI
                      */
                     UseShellExecute = false,
                 };
-                Process.Start(psi);
+                try { Process.Start(psi); }
+                catch (Exception)
+                {
+                    Console.WriteLine("Please check parameters and try again");
+                    
+                    continue;
+                }
                 
                 // Allow for message to be displayed after operations complete since output is shared.
                 System.Threading.Thread.Sleep(2000); 

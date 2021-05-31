@@ -65,39 +65,47 @@ namespace CopyDirectory
          */
         public static string CopyDirectory(string dirSourcePath, string dirDestinationPath, bool overwrite = false, bool mergeDirectories = false)
         {
-            // Check no data is null
-            var paths = new[] {dirSourcePath, dirDestinationPath};
-            if(!CheckNotNull(paths)) return GetMessage(ReturnMessages.NullData);
-            
-            var finalDirPath = Path.Combine(dirDestinationPath, new DirectoryInfo(dirSourcePath).Name);
-            
-            if (Directory.Exists(finalDirPath) && !mergeDirectories)
-                return GetMessage(ReturnMessages.InvalidMoveLocation);
-            
-            // Check dir exists and log process start
-            if (!Directory.Exists(dirSourcePath)) return GetMessage(ReturnMessages.DirDoesNotExist);
-            if (!Directory.Exists(finalDirPath)) Directory.CreateDirectory(finalDirPath);
-            Console.WriteLine("+Copying directory {0} to {1}", dirSourcePath, finalDirPath);
-            
-            // Copy all files
-            foreach (var file in Directory.GetFiles(dirSourcePath))
+            try
             {
-                // Get file name from current path to build final path
-                var finalFilePath = Path.Combine(finalDirPath, Path.GetFileName(file));
+                // Check no data is null
+                var paths = new[] {dirSourcePath, dirDestinationPath};
+                if(!CheckNotNull(paths)) return GetMessage(ReturnMessages.NullData);
+            
+                var finalDirPath = Path.Combine(dirDestinationPath, new DirectoryInfo(dirSourcePath).Name);
+            
+                if (Directory.Exists(finalDirPath) && !mergeDirectories)
+                    return GetMessage(ReturnMessages.InvalidMoveLocation);
+            
+                // Check dir exists and log process start
+                if (!Directory.Exists(dirSourcePath)) return GetMessage(ReturnMessages.DirDoesNotExist);
+                if (!Directory.Exists(finalDirPath)) Directory.CreateDirectory(finalDirPath);
+                Console.WriteLine("+Copying directory {0} to {1}", dirSourcePath, finalDirPath);
+            
+                // Copy all files
+                foreach (var file in Directory.GetFiles(dirSourcePath))
+                {
+                    // Get file name from current path to build final path
+                    var finalFilePath = Path.Combine(finalDirPath, Path.GetFileName(file));
 
-                // Execute copy function
-                var result = CopyFile(file, finalFilePath, overwrite);
-                if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
-            }
+                    // Execute copy function
+                    var result = CopyFile(file, finalFilePath, overwrite);
+                    if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
+                }
                 
-            // Copy all the directories by invoking itself with each nested dir's path
-            foreach (var dir in Directory.GetDirectories(dirSourcePath, "*", SearchOption.TopDirectoryOnly))
+                // Copy all the directories by invoking itself with each nested dir's path
+                foreach (var dir in Directory.GetDirectories(dirSourcePath, "*", SearchOption.TopDirectoryOnly))
+                {
+                    var result = CopyDirectory(dir, finalDirPath, overwrite, mergeDirectories);
+                    if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
+                }
+            
+                return GetMessage(ReturnMessages.CopiedSuccessfully);
+            }
+            catch (Exception)
             {
-                var result = CopyDirectory(dir, finalDirPath, overwrite, mergeDirectories);
-                if (result != GetMessage(ReturnMessages.CopiedSuccessfully)) return result;
+                return GetMessage(ReturnMessages.FailedToCopy);
             }
             
-            return GetMessage(ReturnMessages.CopiedSuccessfully);
         }
         
         /**
